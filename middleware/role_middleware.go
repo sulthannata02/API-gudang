@@ -5,7 +5,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Middleware cek role
+// cek role dari token yang disimpan jwtware
 func RoleMiddleware(allowedRoles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userLoc := c.Locals("user")
@@ -18,9 +18,15 @@ func RoleMiddleware(allowedRoles ...string) fiber.Handler {
 			return c.Status(500).JSON(fiber.Map{"error": "Token type invalid"})
 		}
 
-		claims := userToken.Claims.(jwt.MapClaims)
-		role := claims["role"].(string)
-		println("Role dari token:", role) // lihat di console
+		claims, ok := userToken.Claims.(jwt.MapClaims)
+		if !ok {
+			return c.Status(500).JSON(fiber.Map{"error": "Cannot parse claims"})
+		}
+
+		role, ok := claims["role"].(string)
+		if !ok {
+			return c.Status(500).JSON(fiber.Map{"error": "Role tidak ditemukan di token"})
+		}
 
 		for _, allowed := range allowedRoles {
 			if role == allowed {

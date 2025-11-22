@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -12,7 +14,27 @@ import (
 var DB *gorm.DB
 
 func Connect() {
-	dsn := "root:@tcp(127.0.0.1:3306)/gudang_db?charset=utf8mb4&parseTime=True&loc=Local"
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+
+	if dbUser == "" {
+		dbUser = "root"
+	}
+	if dbHost == "" {
+		dbHost = "127.0.0.1"
+	}
+	if dbPort == "" {
+		dbPort = "3306"
+	}
+	if dbName == "" {
+		dbName = "gudang_db"
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dbUser, dbPass, dbHost, dbPort, dbName)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
