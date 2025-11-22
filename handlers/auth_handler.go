@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,7 +12,14 @@ import (
 	"gudang-app/models"
 )
 
-var jwtSecret = []byte("kobra-secret") // ganti sesuai kebutuhan
+// Ambil JWT_SECRET setelah .env diload
+func GetJWTSecret() []byte {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		panic("JWT_SECRET belum di-load! Pastikan .env terbaca")
+	}
+	return []byte(secret)
+}
 
 // Register user
 func Register(c *fiber.Ctx) error {
@@ -20,7 +28,6 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// hash password
 	hash, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	user.Password = string(hash)
 
@@ -43,22 +50,24 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "User tidak ditemukan"})
 	}
 
-	// cek password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Password salah"})
 	}
 
-	// buat token
 	claims := jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // 1 hari
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	t, err := token.SignedString(jwtSecret)
+	t, err := token.SignedString(GetJWTSecret())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Gagal generate token"})
 	}
 
-	return c.JSON(fiber.Map{"token": t})
+	return c.JSON(fiber.Map{
+		"token": t,
+		"role":  user.Role,
+	})
 }
